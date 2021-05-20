@@ -3,6 +3,7 @@ from app import session
 from app import Base
 
 from datetime import datetime
+from datetime import timedelta
 
 
 class Urls(Base):
@@ -11,5 +12,5 @@ class Urls(Base):
     url = db.Column(db.Text, unique=True)
     short_url = db.Column(db.Text, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now())
-    updated_at = db.Column(db.DateTime, default=datetime.now(), on_update=datetime.now())
+    expiry_at = db.Column(db.DateTime, default=datetime.now() + timedelta(minutes=10))
 

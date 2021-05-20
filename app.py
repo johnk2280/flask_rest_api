@@ -2,18 +2,22 @@ from flask import Flask
 from flask import jsonify
 from flask import request
 
+from datetime import datetime
+from datetime import timedelta
+
 import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
+from hashids import Hashids
+
 from config import Configuration
 
 
 app = Flask(__name__)
 app.config.from_object(Configuration)
-
 client = app.test_client()
 
 engine = create_engine('sqlite:///db.sqlite')
@@ -26,26 +30,33 @@ from models import *
 
 Base.metadata.create_all(bind=engine)
 
+hash_id = Hashids()
+
 
 def create_short_url(url):
     pass
 
 
-def check_url():
+def check_url(url):
     pass
 
 
-@app.route('/test_task_api/v1.0', methods=['GET'])
+def check_short_url(short_url):
+    pass
+
+
+@app.route('/my.test_api', methods=['GET'])
 def get_url():
     urls = Urls.query.all()
     urls_list = []
+
     for url in urls:
         urls_list.append({
             'id': url.id,
             'url': url.url,
             'short_url': url.short_url,
             'created_at': url.created_at,
-            'updated_at': url.updated_at
+            'expiry_at': url.expiry_at
         })
 
     return jsonify(urls_list)
@@ -54,14 +65,27 @@ def get_url():
 @app.route('/test_task_api/v1.0', methods=['POST'])
 def insert_url():
     new_one = Urls(**request.json)
-    session.add(new_one)
-    session.commit()
-    url = {
-        'url': new_one.url,
-        'short_url': new_one.short_url
-    }
 
-    return jsonify(url)
+    if new_one.url:
+
+        base_url = Urls.query.filter(Urls.url == new_one.url).first()
+        if base_url and base_url.expiry_at < datetime.now():
+            return jsonify(base_url.short_url)
+
+
+            # print(base_url.url)
+            # print(base_url.expiry_at)
+            # print(datetime.now())
+            # print(datetime.now() > base_url.expiry_at)
+        # session.add(new_one)
+        # session.commit()
+        # url = {
+        #     'url': new_one.url,
+        #     'short_url': new_one.short_url
+        # }
+
+
+    return '', 404
 
 
 @app.route('/test_task_api/v1.0/<int:url_id>', methods=['PUT'])

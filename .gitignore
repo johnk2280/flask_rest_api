@@ -133,3 +133,4 @@ dmypy.json
 /db.sqlite
 /db/
 /tests/db.sqlite
+/temp.py
