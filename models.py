@@ -13,5 +13,3 @@ class Urls(Base):
     created_at = db.Column(db.DateTime, default=datetime.now())
     updated_at = db.Column(db.DateTime, default=datetime.now(), on_update=datetime.now())
 
-    # def __init__(self, url, short_url):
-    #     super(Urls, self).__init__(self,)

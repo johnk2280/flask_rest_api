@@ -64,14 +64,35 @@ def insert_url():
     return jsonify(url)
 
 
-@app.route('/test_task_api/v1.0/<int:id>', methods=['PUT'])
-def update_url():
-    pass
+@app.route('/test_task_api/v1.0/<int:url_id>', methods=['PUT'])
+def update_url(url_id):
+    item = Urls.query.filter(Urls.id == url_id).first()
+    params = request.json
+    if not item:
+        return {'message': 'No url for this id'}, 400
+
+    for key, value in params.items():
+        setattr(item, key, value)
+
+    session.commit()
+    serialized = {
+        'id': item.id,
+        'url': item.url,
+        'short_url': item.short_url
+    }
+
+    return serialized
 
 
-@app.route('/test_task_api/v1.0/<int:id>', methods=['DELETE'])
-def delete_url():
-    pass
+@app.route('/test_task_api/v1.0/<int:url_id>', methods=['DELETE'])
+def delete_url(url_id):
+    item = Urls.query.filter(Urls.id == url_id).first()
+    if not item:
+        return {'message': 'No url for this id'}, 400
+
+    session.delete(item)
+    session.commit()
+    return '', 204
 
 
 @app.teardown_appcontext
