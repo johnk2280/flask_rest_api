@@ -3,7 +3,11 @@ from flask import jsonify
 from flask import request
 from flask_sqlalchemy import SQLAlchemy
 
+from config import Configuration
+
 app = Flask(__name__)
+app.config.from_object(Configuration)
+
 client = app.test_client()
 
 db = SQLAlchemy(app)
@@ -17,21 +21,21 @@ def check_url():
     pass
 
 
-@app.route('/api/v1.0', methods=['GET'])
+@app.route('/test_task_api/v1.0', methods=['GET'])
 def get_url():
-    pass
+    return 'Hello, Evgen'
 
 
-@app.route('/api/v1.0', methods=['POST'])
+@app.route('/test_task_api/v1.0', methods=['POST'])
 def insert_url():
     pass
 
 
-@app.route('/api/v1.0/<int:id>', methods=['POST'])
+@app.route('/test_task_api/v1.0/<int:id>', methods=['PUT'])
 def update_url():
     pass
 
 
-@app.route('/api/v1.0/<int:id>', methods=['DELETE'])
+@app.route('/test_task_api/v1.0/<int:id>', methods=['DELETE'])
 def delete_url():
     pass
