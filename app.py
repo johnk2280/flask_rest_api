@@ -14,7 +14,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 
-
 from config import Configuration
 
 
@@ -42,53 +41,73 @@ def create_short_url(url):
     return f'https://my.test_api/{hash_id}'
 
 
+def get_all_urls():
+    urls = Urls.query.all()
+    urls_list = []
+
+    for url in urls:
+        urls_list.append({
+            'id': url.id,
+            'url': url.url,
+            'short_url': url.short_url,
+            'created_at': url.created_at,
+            'expiry_at': url.expiry_at
+        })
+
+    return jsonify(urls_list)
+
+
 @app.route('/my.test_api/<short_url>', methods=['GET'])
 def get_url(short_url):
-    if short_url:
-        if short_url != 'get-all-urls':
-            short_url = 'https://my.test_api/' + short_url
-            base_short_url = Urls.query.filter(Urls.short_url == short_url).first()
+    if short_url != 'get-all-urls':
+        url = 'https://my.test_api/' + short_url
+        base_url = Urls.query.filter(Urls.short_url == url).first()
 
-            if base_short_url and base_short_url.expiry_at > datetime.now():
-                return jsonify({'short_url': base_short_url.url}), 302
+        if base_url:
+            if base_url.expiry_at > datetime.now():
+                serialized = {
+                    'id': base_url.id,
+                    'url': base_url.url,
+                    'short_url': base_url.short_url,
+                    'created_at': base_url.created_at,
+                    'expiry_at': base_url.expiry_at
+                }
+                return jsonify(serialized), 302
+            else:
+                return '<h1>Token expired</h1>', 498
 
-            return 'token expired\n', 498
+        return '<h1> 404 Page not found </h1>', 404
 
-        if short_url == 'get-all-urls':
-            urls = Urls.query.all()
-            urls_list = []
-
-            for url in urls:
-                urls_list.append({
-                    'id': url.id,
-                    'url': url.url,
-                    'short_url': url.short_url,
-                    'created_at': url.created_at,
-                    'expiry_at': url.expiry_at
-                })
-
-            return jsonify(urls_list), 200
-
-    return '', 404
+    if short_url == 'get-all-urls':
+        return get_all_urls(), 200
 
 
 @app.route('/test_task_api/v1.0', methods=['POST'])
 def insert_url():
     new_one = Urls(**request.json)
     if new_one.url:
-        base_url = Urls.query.filter(Urls.url == new_one.url).first()
+        base_url = Urls.query.filter(Urls.url == new_one.url).all()[-1]
 
         if base_url and base_url.expiry_at > datetime.now():
-            return jsonify({'url': new_one.url, 'short_url': base_url.short_url})
-
+            short_url = base_url.short_url
+            http_code = 200
         else:
             short_url = create_short_url(new_one.url)
+            new_entry = Urls(url=new_one.url, short_url=short_url)
+            session.add(new_entry)
+            session.commit()
+            base_url = Urls.query.filter(Urls.url == new_one.url).all()[-1]
+            http_code = 201
 
-        new_entry = Urls(url=new_one.url, short_url=short_url)
-        session.add(new_entry)
-        session.commit()
+        serialized = {
+            'id': base_url.id,
+            'url': base_url.url,
+            'short_url': short_url,
+            'created_at': base_url.created_at,
+            'expiry_at': base_url.expiry_at
+        }
 
-        return jsonify({'url': new_one.url, 'short_url': short_url}), 201
+        return jsonify(serialized), http_code
 
     return '', 400
 
@@ -104,13 +123,16 @@ def update_url(url_id):
         setattr(item, key, value)
 
     session.commit()
+
     serialized = {
         'id': item.id,
         'url': item.url,
-        'short_url': item.short_url
+        'short_url': item.short_url,
+        'created_at': item.created_at,
+        'expiry_at': item.expiry_at
     }
 
-    return serialized
+    return jsonify(serialized)
 
 
 @app.route('/test_task_api/v1.0/<int:url_id>', methods=['DELETE'])
