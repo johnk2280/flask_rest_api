@@ -42,29 +42,34 @@ def create_short_url(url):
     return f'https://my.test_api/{hash_id}'
 
 
-def check_url(url):
-    pass
+@app.route('/my.test_api/<short_url>', methods=['GET'])
+def get_url(short_url):
+    if short_url:
+        if short_url != 'get-all-urls':
+            short_url = 'https://my.test_api/' + short_url
+            base_short_url = Urls.query.filter(Urls.short_url == short_url).first()
 
+            if base_short_url and base_short_url.expiry_at > datetime.now():
+                return jsonify({'short_url': base_short_url.url}), 302
 
-def check_short_url(short_url):
-    pass
+            return 'token expired\n', 498
 
+        if short_url == 'get-all-urls':
+            urls = Urls.query.all()
+            urls_list = []
 
-@app.route('/my.test_api', methods=['GET'])
-def get_url():
-    urls = Urls.query.all()
-    urls_list = []
+            for url in urls:
+                urls_list.append({
+                    'id': url.id,
+                    'url': url.url,
+                    'short_url': url.short_url,
+                    'created_at': url.created_at,
+                    'expiry_at': url.expiry_at
+                })
 
-    for url in urls:
-        urls_list.append({
-            'id': url.id,
-            'url': url.url,
-            'short_url': url.short_url,
-            'created_at': url.created_at,
-            'expiry_at': url.expiry_at
-        })
+            return jsonify(urls_list), 200
 
-    return jsonify(urls_list)
+    return '', 404
 
 
 @app.route('/test_task_api/v1.0', methods=['POST'])
@@ -83,7 +88,7 @@ def insert_url():
         session.add(new_entry)
         session.commit()
 
-        return jsonify({'url': new_one.url, 'short_url': short_url})
+        return jsonify({'url': new_one.url, 'short_url': short_url}), 201
 
     return '', 400
 
