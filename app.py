@@ -4,6 +4,8 @@ from flask import request
 
 from datetime import datetime
 from datetime import timedelta
+import random
+from hashids import Hashids
 
 import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker
@@ -11,7 +13,7 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
-from hashids import Hashids
+
 
 from config import Configuration
 
@@ -30,11 +32,14 @@ from models import *
 
 Base.metadata.create_all(bind=engine)
 
-hash_id = Hashids()
-
 
 def create_short_url(url):
-    pass
+    egg = sum([ord(el) for el in url])
+    salt = chr(random.randint(0, 1000))
+    hashids = Hashids(salt=salt)
+    hash_id = hashids.encode(egg)
+
+    return f'https://my.test_api/{hash_id}'
 
 
 def check_url(url):
@@ -65,27 +70,22 @@ def get_url():
 @app.route('/test_task_api/v1.0', methods=['POST'])
 def insert_url():
     new_one = Urls(**request.json)
-
     if new_one.url:
-
         base_url = Urls.query.filter(Urls.url == new_one.url).first()
-        if base_url and base_url.expiry_at < datetime.now():
-            return jsonify(base_url.short_url)
 
+        if base_url and base_url.expiry_at > datetime.now():
+            return jsonify({'url': new_one.url, 'short_url': base_url.short_url})
 
-            # print(base_url.url)
-            # print(base_url.expiry_at)
-            # print(datetime.now())
-            # print(datetime.now() > base_url.expiry_at)
-        # session.add(new_one)
-        # session.commit()
-        # url = {
-        #     'url': new_one.url,
-        #     'short_url': new_one.short_url
-        # }
+        else:
+            short_url = create_short_url(new_one.url)
 
+        new_entry = Urls(url=new_one.url, short_url=short_url)
+        session.add(new_entry)
+        session.commit()
 
-    return '', 404
+        return jsonify({'url': new_one.url, 'short_url': short_url})
+
+    return '', 400
 
 
 @app.route('/test_task_api/v1.0/<int:url_id>', methods=['PUT'])
