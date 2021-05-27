@@ -1,9 +1,10 @@
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask import render_template
 
-from datetime import datetime
-from datetime import timedelta
+# from datetime import datetime
+# from datetime import timedelta
 import random
 from hashids import Hashids
 
@@ -57,6 +58,12 @@ def get_all_urls():
     return jsonify(urls_list)
 
 
+@app.route('/')
+def hello():
+    name = 'Evgen'
+    return render_template('index.html', name=name)
+
+
 @app.route('/my.test_api/<short_url>', methods=['GET'])
 def get_url(short_url):
     if short_url != 'get-all-urls':
@@ -64,39 +71,42 @@ def get_url(short_url):
         base_url = Urls.query.filter(Urls.short_url == url).first()
 
         if base_url:
+            serialized = {
+                'id': base_url.id,
+                'url': base_url.url,
+                'short_url': base_url.short_url,
+                'created_at': base_url.created_at,
+                'expiry_at': base_url.expiry_at
+            }
+
             if base_url.expiry_at > datetime.now():
-                serialized = {
-                    'id': base_url.id,
-                    'url': base_url.url,
-                    'short_url': base_url.short_url,
-                    'created_at': base_url.created_at,
-                    'expiry_at': base_url.expiry_at
-                }
-                return jsonify(serialized), 302
+                return render_template("url_detail.html", serialized=serialized), 302
             else:
-                return '<h1>Token expired</h1>', 498
+                return f'<h1>Token expired</h1>\n{render_template("url_detail.html", serialized=serialized)}', 498
 
         return '<h1> 404 Page not found </h1>', 404
 
     if short_url == 'get-all-urls':
-        return get_all_urls(), 200
+        all_urls = get_all_urls()
+        return render_template('urls.html', all_urls=all_urls.json), 200  #
 
 
-@app.route('/test_task_api/v1.0', methods=['POST'])
+@app.route('/add_url', methods=['GET', 'POST'])
 def insert_url():
-    new_one = Urls(**request.json)
-    if new_one.url:
-        base_url = Urls.query.filter(Urls.url == new_one.url).all()[-1]
+    if request.method == 'POST':
+        new_one = request.form.to_dict().get('url')
+
+        base_url = Urls.query.filter(Urls.url == new_one).all()[-1]
 
         if base_url and base_url.expiry_at > datetime.now():
             short_url = base_url.short_url
             http_code = 200
         else:
-            short_url = create_short_url(new_one.url)
-            new_entry = Urls(url=new_one.url, short_url=short_url)
+            short_url = create_short_url(new_one)
+            new_entry = Urls(url=new_one, short_url=short_url)
             session.add(new_entry)
             session.commit()
-            base_url = Urls.query.filter(Urls.url == new_one.url).all()[-1]
+            base_url = Urls.query.filter(Urls.url == new_one).all()[-1]
             http_code = 201
 
         serialized = {
@@ -107,9 +117,9 @@ def insert_url():
             'expiry_at': base_url.expiry_at
         }
 
-        return jsonify(serialized), http_code
+        return render_template('add_url.html', short_url=short_url), http_code
 
-    return '', 400
+    return render_template('add_url.html')
 
 
 @app.route('/test_task_api/v1.0/<int:url_id>', methods=['PUT'])
