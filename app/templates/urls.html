@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Список ссылок</title>
+</head>
+<body>
+
+<h1>Вот наши ссылки:</h1>
+
+    {% for url in all_urls %}
+        <p> <a href="/my.test_api/{{ url.short_url.split('/')[3] }}">{{ url.short_url }}</a> </p>
+    {% endfor %}
+
+</body>
+</html>
